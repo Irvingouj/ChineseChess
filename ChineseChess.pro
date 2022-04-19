@@ -26,21 +26,36 @@ TEMPLATE = app
 SOURCES += main.cpp\
     ChessBoard.cpp \
     ChessPieces.cpp \
+    ChessRuleProvider.cpp \
+    ChessState.cpp \
     ChessStep.cpp \
     ChessVoice.cpp \
+    Config.cpp \
     MachineGame.cpp \
     NetworkGame.cpp \
     ChooseMainWindow.cpp \
-    AboutAuthor.cpp
+    AboutAuthor.cpp \
+    Rule.cpp \
+    stategenerator.cpp
 
 HEADERS  += ChessBoard.h \
     ChessPieces.h \
+    ChessRuleProvider.fwd.h \
+    ChessRuleProvider.h \
+    ChessState.fwd.h \
+    ChessState.h \
     ChessStep.h \
     ChessVoice.h \
+    Config.h \
     MachineGame.h \
+    MonteCarloTree.h \
     NetworkGame.h \
     ChooseMainWindow.h \
-    AboutAuthor.h
+    AboutAuthor.h \
+    Node.h \
+    Rule.h \
+    myLog.h \
+    stategenerator.h
 
 FORMS    += ChessBoard.ui \
     AboutAuthor.ui

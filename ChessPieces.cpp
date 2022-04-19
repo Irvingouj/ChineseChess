@@ -20,69 +20,92 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/gpl-3.0.html>.
  */
 #include "ChessPieces.h"
+#include <map>
+#include "Config.h"
+
 
 //1、定义结构体tPOS
 struct POS
 {
     int t_nRow;
     int t_nCol;
-    ChessPieces::m_emTYPE t_emType;
+    ChessPiece::CHESS_TYPE t_emType;
 };
 
 //定义基础的16棋子[预定作为上方使用，黑棋使用]
 POS tPos[16]= {
-              {0, 0, ChessPieces::CHE},
-              {0, 1, ChessPieces::MA},
-              {0, 2, ChessPieces::XIANG},
-              {0, 3, ChessPieces::SHI},
-              {0, 4, ChessPieces::JIANG},
-              {0, 5, ChessPieces::SHI},
-              {0, 6, ChessPieces::XIANG},
-              {0, 7, ChessPieces::MA},
-              {0, 8, ChessPieces::CHE},
+              {0, 0, ChessPiece::CHE},
+              {0, 1, ChessPiece::MA},
+              {0, 2, ChessPiece::XIANG},
+              {0, 3, ChessPiece::SHI},
+              {0, 4, ChessPiece::JIANG},
+              {0, 5, ChessPiece::SHI},
+              {0, 6, ChessPiece::XIANG},
+              {0, 7, ChessPiece::MA},
+              {0, 8, ChessPiece::CHE},
 
-              {2, 1, ChessPieces::PAO},
-              {2, 7, ChessPieces::PAO},
-              {3, 0, ChessPieces::BING},
-              {3, 2, ChessPieces::BING},
-              {3, 4, ChessPieces::BING},
-              {3, 6, ChessPieces::BING},
-              {3, 8, ChessPieces::BING}
+              {2, 1, ChessPiece::PAO},
+              {2, 7, ChessPiece::PAO},
+              {3, 0, ChessPiece::BING},
+              {3, 2, ChessPiece::BING},
+              {3, 4, ChessPiece::BING},
+              {3, 6, ChessPiece::BING},
+              {3, 8, ChessPiece::BING}
               };
 
-ChessPieces::ChessPieces()
+std::map<ChessPiece::CHESS_TYPE,int> valueMap = {
+    {ChessPiece::CHE,Config::CHE},
+    {ChessPiece::MA,Config::MA},
+    {ChessPiece::PAO,Config::PAO},
+    {ChessPiece::XIANG,Config::XIANG},
+    {ChessPiece::SHI,Config::SHI},
+    {ChessPiece::JIANG,Config::JIANG},
+    {ChessPiece::BING,Config::BING},
+};
+
+
+ChessPiece::ChessPiece()
 {
 }
 
-ChessPieces::~ChessPieces()
+ChessPiece::~ChessPiece()
 {
+}
+
+bool selectPiece(ChessPiece* pi){
+    //helper function to choose pieces to start with
+    return true;
 }
 
 //初始化  对每一个棋子进行检验判断而后赋相应的值
-void ChessPieces::init(int id)
+void ChessPiece::init(int id)
 {
     if(id <16)
     {
-        m_nRow = tPos[id].t_nRow;
-        m_nCol = tPos[id].t_nCol;
-        m_emType = tPos[id].t_emType;
-        m_bRed = false;
+        row = tPos[id].t_nRow;
+        col = tPos[id].t_nCol;
+        type = tPos[id].t_emType;
+        this->id = id;
+        isRed = false;
     }
     else
     {
-        m_nRow = 9-tPos[id-16].t_nRow;
-        m_nCol = 8-tPos[id-16].t_nCol;
-        m_emType = tPos[id-16].t_emType;
-        m_bRed = true;
+        row = 9-tPos[id-16].t_nRow;
+        col = 8-tPos[id-16].t_nCol;
+        type = tPos[id-16].t_emType;
+        this->id = id;
+        isRed = true;
     }
 
-    m_bDead = false;
+    if(selectPiece(this)){
+       isDead = false;
+    }
 }
 
-QString ChessPieces::getnName(bool isRedSide)
+QString ChessPiece::getnName(bool isRedSide)
 {
     if(isRedSide){
-        switch (m_emType) {
+        switch (type) {
         case CHE:
             return "俥";
         case MA:
@@ -102,7 +125,7 @@ QString ChessPieces::getnName(bool isRedSide)
         }
     }
     else{
-        switch (m_emType) {
+        switch (type) {
         case CHE:
             return "車";
         case MA:
@@ -122,4 +145,11 @@ QString ChessPieces::getnName(bool isRedSide)
         }
     }
     return "ERROR";
+}
+
+int ChessPiece::value(){
+    if(this->isDead){
+        return 0;
+    }
+    return valueMap.at(this->type);
 }

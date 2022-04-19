@@ -20,6 +20,23 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/gpl-3.0.html>.
  */
 #include "MachineGame.h"
+#include <QApplication>
+#include <chrono>
+#include <thread>
+#include "Node.h"
+#include "MonteCarloTree.h"
+#include "ChessState.h"
+
+namespace MachineGameHelper{
+    bool isSamePieceAndDifferentPos(ChessPiece a,ChessPiece b){
+        if ((a.type == b.type) && (a.isRed == b.isRed)){
+            if(a.row != b.row || a.col!=b.col){
+                return true;
+            }
+        }
+        return false;
+    }
+}
 
 MachineGame::MachineGame()
 {
@@ -36,7 +53,7 @@ void MachineGame::chooseOrMovePieces(int tempID, int& row, int& col)
     {
         if(m_nCheckedID != -1)
         {
-            if(m_ChessPieces[m_nCheckedID].m_bRed)
+            if(m_ChessPieces[m_nCheckedID].isRed)
             {
                 m_nSelectID = tempID;
             }
@@ -53,10 +70,10 @@ void MachineGame::chooseOrMovePieces(int tempID, int& row, int& col)
         {
             //_selectId为第一次点击选中的棋子，
             //_clickId为第二次点击||被杀的棋子ID，准备选中棋子下子的地方
-            m_ChessPieces[m_nSelectID].m_nRow = row;
-            m_ChessPieces[m_nSelectID].m_nCol = col;
+            m_ChessPieces[m_nSelectID].row = row;
+            m_ChessPieces[m_nSelectID].col = col;
             if(m_nCheckedID != -1)
-                m_ChessPieces[m_nCheckedID].m_bDead = true;
+                m_ChessPieces[m_nCheckedID].isDead = true;
 
             m_nSelectID = -1;
             m_bIsRed = !m_bIsRed;
@@ -67,24 +84,24 @@ void MachineGame::chooseOrMovePieces(int tempID, int& row, int& col)
     update();
 }
 
-void MachineGame::saveStep(int selectID, int checkedID, int row, int col, QVector<ChessStep *> &steps)
+void MachineGame::saveStep(int selectID, int checkedID, int row, int col, QVector<ChessStep> &steps)
 {
-    ChessStep* step = new ChessStep;
-    step->m_nRowFrom = m_ChessPieces[selectID].m_nRow;
-    step->m_nColFrom = m_ChessPieces[selectID].m_nCol;
-    step->m_nRowTo = row;
-    step->m_nnColTo = col;
-    step->m_nMoveID = selectID;
-    step->m_nKillID = checkedID;
+    ChessStep step;
+    step.fromRow = m_ChessPieces[selectID].row;
+    step.fromCol = m_ChessPieces[selectID].col;
+    step.toRow = row;
+    step.toCol = col;
+    step.moveId = selectID;
+    step.killId = checkedID;
 
     steps.append(step);
 }
 
-void MachineGame::getAllPossibleMoveStep(QVector<ChessStep *> &steps)
+void MachineGame::getAllPossibleMoveStep(QVector<ChessStep> &steps)
 {
     for(int id = 0; id<16; id++)   //存在的黑棋， 能否走到这些盘棋盘里面的格子
     {
-        if(m_ChessPieces[id].m_bDead)
+        if(m_ChessPieces[id].isDead)
             continue;
 
         for(int row=0; row<10; row++)
@@ -94,7 +111,7 @@ void MachineGame::getAllPossibleMoveStep(QVector<ChessStep *> &steps)
                 int i = 16;
                 for( ; i <= 31; i++)
                 {
-                    if(m_ChessPieces[i].m_nRow == row && m_ChessPieces[i].m_nCol == col && m_ChessPieces[i].m_bDead == false)
+                    if(m_ChessPieces[i].row == row && m_ChessPieces[i].col == col && m_ChessPieces[i].isDead == false)
                         break;
                 }
 
@@ -108,11 +125,11 @@ void MachineGame::getAllPossibleMoveStep(QVector<ChessStep *> &steps)
     }
 }
 
-void MachineGame::getAllPossibleMoveStepAndNoKill(QVector<ChessStep *> &steps)
+void MachineGame::getAllPossibleMoveStepAndNoKill(QVector<ChessStep> &steps)
 {
     for(int id = 0; id<16; id++)   //存在的黑棋， 能否走到这些盘棋盘里面的格子
     {
-        if(m_ChessPieces[id].m_bDead)
+        if(m_ChessPieces[id].isDead)
             continue;
 
         for(int row=0; row<10; row++)
@@ -123,7 +140,7 @@ void MachineGame::getAllPossibleMoveStepAndNoKill(QVector<ChessStep *> &steps)
                 int i = 0;
                 for(; i <= 31; i++)
                 {
-                    if(m_ChessPieces[i].m_nRow == row && m_ChessPieces[i].m_nCol == col && m_ChessPieces[i].m_bDead == false)
+                    if(m_ChessPieces[i].row == row && m_ChessPieces[i].col == col && m_ChessPieces[i].isDead == false)
                         break;
                 }
 
@@ -143,7 +160,7 @@ void MachineGame::mousePressEvent(QMouseEvent *ev)
         return;
 
     int row, col;
-    if(!isChecked(ev->pos(), row, col))
+    if(!isSelected(ev->pos(), row, col))
         return;
 
     m_nCheckedID = -1;
@@ -152,7 +169,7 @@ void MachineGame::mousePressEvent(QMouseEvent *ev)
     int i =0;
     for( ; i < 32; i++)
     {
-        if(m_ChessPieces[i].m_nRow == row && m_ChessPieces[i].m_nCol == col && m_ChessPieces[i].m_bDead == false)
+        if(m_ChessPieces[i].row == row && m_ChessPieces[i].col == col && m_ChessPieces[i].isDead == false)
             break;
     }
 
@@ -160,20 +177,6 @@ void MachineGame::mousePressEvent(QMouseEvent *ev)
         m_nCheckedID = i;
 
     clickPieces(m_nCheckedID, row, col);
-
-    if(m_bIsRed) //红方玩家时间
-    {
-        chooseOrMovePieces(i, row, col);
-
-        if(!m_bIsRed) //黑方紧接着进行游戏
-        {
-            machineChooseAndMovePieces();
-            //ToDo: 机器 黑方时间
-        }
-    }
-
-
-
 }
 
 void MachineGame::clickPieces(int checkedID, int &row, int &col)
@@ -181,34 +184,39 @@ void MachineGame::clickPieces(int checkedID, int &row, int &col)
     if(m_bIsRed) //红方玩家时间
     {
         chooseOrMovePieces(checkedID, row, col);
+        qApp->processEvents();
 
         if(!m_bIsRed) //黑方紧接着进行游戏
             machineChooseAndMovePieces();
-            //ToDo: 机器 黑方时间
     }
 }
 
-//假装移动棋子
-void MachineGame::fakeMove(ChessStep *step)
-{
-     if(step->m_nKillID != -1)
-         m_ChessPieces[step->m_nKillID].m_bDead = true;
+ChessStep MachineGame::getStepFromState(ChessState state){
+    ChessStep res;
+    for(auto &pieceInState:state.getChessPieces()){
+        for (auto &pieceInGame : this->m_ChessPieces) {
+           if(pieceInGame.id == pieceInState.id){
+               if(pieceInGame.row != pieceInState.row || pieceInGame.col != pieceInState.col){
+                   res.fromCol = pieceInGame.col;
+                   res.fromRow = pieceInGame.row;
 
-     m_ChessPieces[step->m_nMoveID].m_nRow = step->m_nRowTo;
-     m_ChessPieces[step->m_nMoveID].m_nCol = step->m_nnColTo;
-     m_bIsRed = !m_bIsRed;
+                   res.toCol = pieceInState.col;
+                   res.toRow = pieceInState.row;
+
+                   res.moveId = pieceInGame.id;
+                   for (auto &possibleKilledPiece : this->m_ChessPieces){
+                       if(possibleKilledPiece.row == res.toRow && possibleKilledPiece.col == res.toCol ){
+                           res.killId = possibleKilledPiece.id;
+                       }
+                   }
+               }
+           }
+        }
+    }
+    return res;
 }
 
-//撤回先前假装移动棋子的步骤
-void MachineGame::unFakeMove(ChessStep *step)
-{
-    if(step->m_nKillID != -1)
-        m_ChessPieces[step->m_nKillID].m_bDead = false;
 
-    m_ChessPieces[step->m_nMoveID].m_nRow = step->m_nRowFrom;
-    m_ChessPieces[step->m_nMoveID].m_nCol = step->m_nColFrom;
-    m_bIsRed = !m_bIsRed;
-}
 
 //计算最好的局面分
 int MachineGame::calcScore()
@@ -222,16 +230,16 @@ int MachineGame::calcScore()
 
     for(int i=0; i<16; i++)
     {
-        if(m_ChessPieces[i].m_bDead)
+        if(m_ChessPieces[i].isDead)
             continue;
-        blackGrossScore += chessScore[m_ChessPieces[i].m_emType];
+        blackGrossScore += chessScore[m_ChessPieces[i].type];
     }
 
     for(int i=16; i<32; i++)
     {
-        if(m_ChessPieces[i].m_bDead)
+        if(m_ChessPieces[i].isDead)
             continue;
-        redGrossScore += chessScore[m_ChessPieces[i].m_emType];
+        redGrossScore += chessScore[m_ChessPieces[i].type];
     }
 
     return (blackGrossScore - redGrossScore);
@@ -239,73 +247,43 @@ int MachineGame::calcScore()
 
 
 //获得最好的移动步骤
-//第一此玩了一把，发现我居然下不赢自己写的算法。哭了哭了哭了555555........
-ChessStep* MachineGame::getBestMove()
+ChessStep MachineGame::getBestMove()
 {
-    int maxScore = -10000;
-    ChessStep* retStep = NULL;
-
-    //------------------------
-    //有可击杀的红棋子就走击杀红棋子最优的一步
-    // 1.看看有那些步骤可以走
-    QVector<ChessStep*> steps;
-    getAllPossibleMoveStep(steps);   // 黑棋吃红棋的所有可能的步骤
-
-    //------------------------
-    //没有可击杀的红棋子就走最后的一步
-    QVector<ChessStep*> stepsAndNoKill;
-    getAllPossibleMoveStepAndNoKill(stepsAndNoKill);   // 黑棋移动所有可能的步骤(不吃红棋子)
-
-    //2.试着走一下
-    for(QVector<ChessStep*>::iterator it = steps.begin(); it!=steps.end(); it++)
-    {
-        ChessStep* step = *it;
-        fakeMove(step);
-        int score = calcScore();   //3.计算最好的局面分
-        unFakeMove(step);
-
-        if(score > maxScore)
-        {
-            maxScore = score;
-            retStep = step;
-        }
+    std::vector<ChessPiece> vec;
+    for(auto i = 0;i<32;++i){
+        vec.push_back(m_ChessPieces[i]);
     }
 
-    if(retStep != NULL)
-        return retStep;
+    ChessState state(vec,BLACK);
+    MonteCarloTree<ChessState> mct(state);
 
-    //2.试着走一下
-    //从这种不击杀红棋子，只是单纯移动黑棋steps里面，随机抽选一种进行下棋
-    int nStepsCount = stepsAndNoKill.count();
-    qsrand(QTime(0,0,0).secsTo(QTime::currentTime())); //随机数种子, 0~MAX
-    int temp =qrand()% nStepsCount;
-    QVector<ChessStep*>::iterator it = stepsAndNoKill.begin();
-    retStep = it[temp];
+    auto bestState = mct.search();
 
-    if(retStep == NULL)
-        whoWin();
-
-    //4.取最好的结果作为参考
-    return retStep;
+    return this->getStepFromState(bestState);
 }
 
 void MachineGame::machineChooseAndMovePieces()
 {
-    ChessStep* step = getBestMove();
+    ChessStep step = getBestMove();
+    move(step);
+}
 
-    if(step->m_nKillID == -1)  //黑棋没有可以击杀的红棋子，只好走能够走的过程中最后一步棋
+void MachineGame::move(ChessStep step){
+    if(step.killId == -1)  //黑棋没有可以击杀的红棋子，只好走能够走的过程中最后一步棋
     {
-        m_ChessPieces[step->m_nMoveID].m_nRow = step->m_nRowTo;
-        m_ChessPieces[step->m_nMoveID].m_nCol = step->m_nnColTo;
+        m_ChessPieces[step.moveId].row = step.toRow;
+        m_ChessPieces[step.moveId].col = step.toCol;
 
     }
     else //黑棋有可以击杀的红棋子，故击杀红棋子
     {
-        m_ChessPieces[step->m_nKillID].m_bDead = true;
-        m_ChessPieces[step->m_nMoveID].m_nRow = m_ChessPieces[step->m_nKillID].m_nRow;
-        m_ChessPieces[step->m_nMoveID].m_nCol = m_ChessPieces[step->m_nKillID].m_nCol;
+        m_ChessPieces[step.killId].isDead = true;
+        m_ChessPieces[step.moveId].row = m_ChessPieces[step.killId].row;
+        m_ChessPieces[step.moveId].col = m_ChessPieces[step.killId].col;
         m_nSelectID = -1;
     }
 
     m_bIsRed = !m_bIsRed;
 }
+
+

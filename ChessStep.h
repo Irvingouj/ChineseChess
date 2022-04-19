@@ -22,21 +22,41 @@
 #ifndef CHESSSTEP_H
 #define CHESSSTEP_H
 
-#include <QObject>
+#include "QString"
+#include "QStringBuilder"
+#include "ChessPieces.h"
+using namespace std;
 
-class ChessStep : public QObject
+class ChessStep
 {
-    Q_OBJECT
-public:
-    explicit ChessStep(QObject *parent = 0);
-    ~ChessStep();
 
-    int m_nMoveID;   //移动棋子ID
-    int m_nKillID;   //将要被击杀的棋子ID
-    int m_nRowFrom;  //原位置的行
-    int m_nColFrom;  //原位置的列
-    int m_nRowTo;    //目的位置的行
-    int m_nnColTo;   //目的位置的列
+public:
+    explicit ChessStep();
+    ~ChessStep();
+    ChessStep(ChessPiece const &piece){
+        this->moveId = piece.id;
+        this->fromCol = piece.col;
+        this->fromRow = piece.row;
+    }
+
+    int moveId;   //移动棋子ID
+    int killId = -1;   //将要被击杀的棋子ID
+
+    int fromRow;  //原位置的行
+    int fromCol;  //原位置的列
+    int toRow;    //目的位置的行
+    int toCol;   //目的位置的列
+
+    std::string toString(){
+        return QString("%1 %2 %3 %4 %5 %6")
+                .arg(moveId)
+                .arg(killId)
+                .arg(fromRow)
+                .arg(fromCol)
+                .arg(toRow)
+                .arg(toCol)
+                .toStdString();
+    }
 };
 
 #endif // CHESSSTEP_H
